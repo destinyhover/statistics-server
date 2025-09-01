@@ -13,6 +13,7 @@ FROM alpine:3.20
 WORKDIR /app
 
 RUN mkdir -p /data
+COPY data/data.json /data/data.json     
 ENV DATA_PATH=/data/data.json PORT=:1234
 VOLUME ["/data"]
 
