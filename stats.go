@@ -13,7 +13,6 @@ import (
 )
 
 type App struct {
-	mu   sync.Mutex
 	rwmu sync.RWMutex
 }
 
@@ -100,8 +99,8 @@ func readJSONFile(filepath string) error {
 	_, err := os.Stat(filepath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			os.OpenFile(filepath, os.O_RDONLY|os.O_CREATE, 0644)
-			return nil
+			_, err = os.OpenFile(filepath, os.O_RDONLY|os.O_CREATE, 0644)
+			return err
 		}
 		return err
 	}

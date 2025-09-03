@@ -26,8 +26,8 @@ func (a *App) deleteHandler(w http.ResponseWriter, r *http.Request) {
 	log.Println("Serving:", r.URL.Path, "from", r.Host)
 
 	dataset := paramStr[2]
-	a.mu.Lock()
-	defer a.mu.Unlock()
+	a.rwmu.Lock()
+	defer a.rwmu.Unlock()
 	err := deleteEntry(dataset)
 	if err != nil {
 		fmt.Println(err)
@@ -77,8 +77,8 @@ func (a *App) insertHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		sarr = append(sarr, val)
 	}
-	a.mu.Lock()
-	defer a.mu.Unlock()
+	a.rwmu.Lock()
+	defer a.rwmu.Unlock()
 	entry := process(parts[2], sarr)
 	err := insert(&entry)
 	if err != nil {
@@ -102,8 +102,8 @@ func (a *App) searchHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	dataSet := paramStr[2]
-	a.mu.Lock()
-	defer a.mu.Unlock()
+	a.rwmu.Lock()
+	defer a.rwmu.Unlock()
 	t := search(dataSet)
 	if t == nil {
 		w.WriteHeader(http.StatusNotFound)
