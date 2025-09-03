@@ -8,8 +8,14 @@ import (
 	"net/http"
 	"os"
 	"slices"
+	"sync"
 	"time"
 )
+
+type App struct {
+	mu   sync.Mutex
+	rwmu sync.RWMutex
+}
 
 func getenv(k, def string) string {
 	if v := os.Getenv((k)); v != "" {
@@ -173,24 +179,24 @@ func main() {
 	}
 
 	createIndex()
-	m := http.NewServeMux()
+	mux := http.NewServeMux()
 	s := &http.Server{
 		Addr:         PORT,
-		Handler:      m,
+		Handler:      mux,
 		IdleTimeout:  10 * time.Second,
 		ReadTimeout:  time.Second,
 		WriteTimeout: time.Second,
 	}
 
-	m.Handle("/", http.HandlerFunc(defaultHandler))
-	m.Handle("/list", http.HandlerFunc(listingHandler))
-	m.Handle("/search", http.HandlerFunc(searchHandler))
-	m.Handle("/search/", http.HandlerFunc(searchHandler))
-	m.Handle("/status", http.HandlerFunc(statusHandler))
-	m.Handle("/delete/", http.HandlerFunc(deleteHandler))
-	m.HandleFunc("/insert", insertHandler)
-	m.HandleFunc("/insert/", insertHandler)
-
+	a := &App{}
+	mux.Handle("/", http.HandlerFunc(defaultHandler))
+	mux.Handle("/list", http.HandlerFunc(a.listingHandler))
+	mux.Handle("/search", http.HandlerFunc(a.searchHandler))
+	mux.Handle("/search/", http.HandlerFunc(a.searchHandler))
+	mux.Handle("/status", http.HandlerFunc(a.statusHandler))
+	mux.Handle("/delete/", http.HandlerFunc(a.deleteHandler))
+	mux.HandleFunc("/insert", a.insertHandler)
+	mux.HandleFunc("/insert/", a.insertHandler)
 	fmt.Println("Ready to serve at", PORT)
 	err = s.ListenAndServe()
 	if err != nil {

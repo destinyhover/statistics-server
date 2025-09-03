@@ -15,7 +15,7 @@ func defaultHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "%s", body)
 }
 
-func deleteHandler(w http.ResponseWriter, r *http.Request) {
+func (a *App) deleteHandler(w http.ResponseWriter, r *http.Request) {
 	paramStr := strings.Split(r.URL.Path, "/")
 	fmt.Println("Path:", paramStr)
 	if len(paramStr) < 3 {
@@ -26,6 +26,8 @@ func deleteHandler(w http.ResponseWriter, r *http.Request) {
 	log.Println("Serving:", r.URL.Path, "from", r.Host)
 
 	dataset := paramStr[2]
+	a.mu.Lock()
+	defer a.mu.Unlock()
 	err := deleteEntry(dataset)
 	if err != nil {
 		fmt.Println(err)
@@ -34,29 +36,30 @@ func deleteHandler(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "%s", body)
 		return
 	}
-
 	body := dataset + " deleted\n"
 	w.WriteHeader(http.StatusOK)
 	fmt.Fprintf(w, "%s", body)
 }
 
-func listingHandler(w http.ResponseWriter, r *http.Request) {
+func (a *App) listingHandler(w http.ResponseWriter, r *http.Request) {
 	log.Println("Serving:", r.URL.Path, "from", r.Host)
-
+	a.rwmu.RLock()
 	body := list()
 	w.WriteHeader(http.StatusOK)
 	fmt.Fprintf(w, "%s", body)
+	a.rwmu.RUnlock()
 }
 
-func statusHandler(w http.ResponseWriter, r *http.Request) {
+func (a *App) statusHandler(w http.ResponseWriter, r *http.Request) {
 	log.Println("Serving:", r.URL.Path, "from", r.Host)
-
+	a.rwmu.RLock()
 	s := fmt.Sprintf("Total entries: %d\n", len(data))
 	w.WriteHeader(http.StatusOK)
 	fmt.Fprintf(w, "%s", s)
+	a.rwmu.RUnlock()
 }
 
-func insertHandler(w http.ResponseWriter, r *http.Request) {
+func (a *App) insertHandler(w http.ResponseWriter, r *http.Request) {
 	parts := strings.Split(r.URL.Path, "/")
 	if len(parts) < 4 {
 		w.WriteHeader(http.StatusBadRequest)
@@ -74,7 +77,8 @@ func insertHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		sarr = append(sarr, val)
 	}
-
+	a.mu.Lock()
+	defer a.mu.Unlock()
 	entry := process(parts[2], sarr)
 	err := insert(&entry)
 	if err != nil {
@@ -88,16 +92,18 @@ func insertHandler(w http.ResponseWriter, r *http.Request) {
 	log.Println("Serving:", r.URL.Path, "from", r.Host)
 }
 
-func searchHandler(w http.ResponseWriter, r *http.Request) {
+func (a *App) searchHandler(w http.ResponseWriter, r *http.Request) {
 	paramStr := strings.Split(r.URL.Path, "/")
 	log.Println("Path:", paramStr)
 
 	if len(paramStr) < 3 {
 		w.WriteHeader(http.StatusNotFound)
-		fmt.Fprintf(w, "Not found: %s\n", r.URL.Path)
+		fmt.Fprintf(w, "Too short: %s\n", r.URL.Path)
 	}
 
 	dataSet := paramStr[2]
+	a.mu.Lock()
+	defer a.mu.Unlock()
 	t := search(dataSet)
 	if t == nil {
 		w.WriteHeader(http.StatusNotFound)
